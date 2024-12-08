@@ -3,7 +3,7 @@ const express = require("express");
 const cors = require("cors");
 const morgan = require("morgan");
 const { init: initDB, Counter } = require("./db");
-
+const axios = require("axios");
 const logger = morgan("tiny");
 
 const app = express();
@@ -32,6 +32,31 @@ app.post("/api/count", async (req, res) => {
     data: await Counter.count(),
   });
 });
+
+app.post("/get_access_token", async (req, res) => {
+  try {
+    const apiUrl = "https://api.weixin.qq.com/cgi-bin/token";
+    const params = {
+      grant_type: "client_credential",
+      appid: "wx695a65008cff4199", // Replace with your appid
+    };
+
+    // Sending POST request
+    const response = await axios.post(apiUrl, {}, { params });
+
+    res.send({
+      code: 0,
+      data: response.data, // Return the response from the API
+    });
+  } catch (error) {
+    console.error("Error fetching access token:", error.message);
+    res.status(500).send({
+      code: 1,
+      message: "Failed to fetch access token",
+    });
+  }
+});
+
 
 // 获取计数
 app.get("/api/count", async (req, res) => {
