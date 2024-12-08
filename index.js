@@ -38,8 +38,7 @@ app.post("/api/count", async (req, res) => {
 
 app.post("/api/get_access_token", async (req, res) => {
   try {
-    const { appId } = req.body;
-    const { secret } = req.body;
+    const { appId, secret } = req.body;
 
     if (!appId) {
       return res.status(400).send({
@@ -75,12 +74,13 @@ app.post("/api/get_access_token", async (req, res) => {
 
 app.post("/api/v2/add_draft", async (req, res) => {
   try {
-    const { appId } = req.body;
+    const { access_token } = req.query;
+    console.log("....", access_token)
 
-    if (!appId) {
+    if (!access_token) {
       return res.status(400).send({
         code: 1,
-        message: "Missing required parameter: appId",
+        message: "Missing required parameter: access_token",
       });
     }
 
@@ -93,14 +93,14 @@ app.post("/api/v2/add_draft", async (req, res) => {
             "digest": "ASB调查显示，尽管利率下降预期创纪录，但房价上涨信心减弱，仅8%认为适合购房。经济不确定性仍是关键因素。",
             "content": "根据ASB最新的",
             "content_source_url": "",
-            "thumb_media_id": "mWe_h8mHCnSqW6BZ95WTHdv4R-LTG9iRvoXQ5mzTdGOS2SPJQvZVsa4sNpGMEZz6",
+            "thumb_media_id": "mWe_h8mHCnSqW6BZ95WTHVbb_92FEoSnTzi66yPS3XBQq8asI4KlpsrYUHXrrXX3",
             "need_open_comment": 0,
             "only_fans_can_comment": 0
         }
       ],
     }
     const params = {
-      appid: appId,
+      access_token: access_token,
     };
 
     // Sending POST request
@@ -121,9 +121,10 @@ app.post("/api/v2/add_draft", async (req, res) => {
 
 const upload = multer({ dest: "uploads/" }); // Temporary directory for uploads
 
-app.post("/api/add_media", upload.single("media"), async (req, res) => {
+app.post("/api/add_media", upload.single("file"), async (req, res) => {
   try {
     const { access_token, type } = req.body;
+    console.log("Access Token:", access_token);
 
     if (!access_token) {
       return res.status(400).send({
@@ -147,14 +148,15 @@ app.post("/api/add_media", upload.single("media"), async (req, res) => {
 
     // Prepare form-data
     const form = new FormData();
-    form.append("media", fs.createReadStream(req.file.path)); // Path to the uploaded file
+    form.append("media", fs.createReadStream(req.file.path), {
+      filename: req.file.originalname, // Original file name
+      contentType: req.file.mimetype, // Preserved MIME type
+    });
 
     // Send request to the WeChat API
     const response = await axios.post(apiUrl, form, {
-      params,
-      headers: {
-        ...form.getHeaders(), // Pass headers for form-data
-      },
+      params, // Query parameters
+      headers: form.getHeaders(), // Proper headers for form-data
     });
 
     // Cleanup the uploaded file
@@ -208,14 +210,6 @@ app.post("/api/list_media", async (req, res) => {
   }
 });
 
-// 获取计数
-app.get("/api/count", async (req, res) => {
-  const result = await Counter.count();
-  res.send({
-    code: 0,
-    data: result,
-  });
-});
 
 // 小程序调用，获取微信 Open ID
 app.get("/api/wx_openid", async (req, res) => {
